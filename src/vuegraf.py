@@ -72,11 +72,14 @@ def lookupDeviceName(account, device_gid):
         deviceName = account['deviceIdMap'][device_gid].device_name
     return deviceName
 
-def lookupChannelName(account, chan):
+def lookupParentDeviceName(account, chan):
     if chan.device_gid not in account['deviceIdMap']:
         populateDevices(account)
 
-    deviceName = lookupDeviceName(account, chan.device_gid)
+    return lookupDeviceName(account, chan.device_gid)
+
+def lookupChannelName(account, chan):
+    deviceName = lookupParentDeviceName(account, chan)
     name = "{}-{}".format(deviceName, chan.channel_num)
     if 'devices' in account:
         for device in account['devices']:
@@ -88,6 +91,7 @@ def lookupChannelName(account, chan):
                 except:
                     name = deviceName
     return name
+
 
 signal.signal(signal.SIGINT, handleExit)
 signal.signal(signal.SIGHUP, handleExit)
@@ -136,6 +140,7 @@ while running:
             secondsInAnHour = 3600
             wattsInAKw = 1000
             for chan in channels:
+                parentDeviceName = lookupParentDeviceName(account, chan)
                 chanName = lookupChannelName(account, chan)
 
                 usage, usage_start_time = account['vue'].get_chart_usage(chan, start, account['end'], scale=Scale.SECOND.value, unit=Unit.KWH.value)
@@ -148,6 +153,7 @@ while running:
                             "tags": {
                                 "account_name": account['name'],
                                 "device_name": chanName,
+                                "parent_device_name": parentDeviceName,
                             },
                             "fields": {
                                 "usage": watts,
